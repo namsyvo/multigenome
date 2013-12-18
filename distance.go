@@ -177,33 +177,21 @@ func DistanceMulti(s, t []byte, pos int) (float32, int, int, int, [][]int) {
     }
     //fmt.Println(d, m, n)
 
-    //"Edit distance" part
-
-    // Make a 2-D matrix:
-    // 	rows correspond to prefixes of source, columns to prefixes of target.
-    // 	cells contain edit distances.
     H := make([][]int, m + 1)
     for i = 0; i <= m; i++ {
             H[i] = make([]int, n + 1)
     }
-    // Initialize distances (base cases, from/to empty string).
-	// Initialize the first row in distance matrix
     H[0][0] = 0
-	//Initialize the first column in distance matrix
     for i = 1; i <= m; i++ {
 		H[i][0] = INF
     }
-	//Initialize the first row in distance matrix
     for j = 1; j <= n; j++ {
 		H[0][j] = 0
     }
 	//fmt.Println(H)
-    // Fill in the remaining cells follow the Levenshtein algorithm.
-	//Compute values in all rows in distance matrix
 	var temp int
     for i = 1; i <= m; i++ {
 		//fmt.Println("i: ", i)
-		//Compute values in all cell in row i in distance matrix
         for j = 1; j <= n; j++ {
 			snp_values, is_snp = SNP_PROFILE[pos + j - 1]
 	    	if !is_snp {
@@ -223,28 +211,12 @@ func DistanceMulti(s, t []byte, pos int) (float32, int, int, int, [][]int) {
 						}
 	    				if H[i][j] > temp {
 	    					H[i][j] = temp
-	    				}
-						//fmt.Println(">>> ",k, snp_values[k], string(s[i - len(snp_values[k]) : i]), string(snp_values[k]), d)
+	    					}
 					}
 	   			}
 			}
-			//fmt.Println("j: ", j, ": ", H[i][j], " ")
 		}
-		//fmt.Println()
-/*		//Early break if ED exceeds given threshold
-		flag := true
-		for k = 0; k <= n; k++ {
-		    if H[i][k] <= DIST_THRES - d {
-		        flag = false
-		        break
-		    }
-		}
-		if flag {
-			return float32(DIST_THRES + 1) * ERR_COST, d, m, n, [][]int{}
-		}
-*/
 	}
-	//fmt.Println(H)
     return float32(d + H[m][n]) * ERR_COST, d, m, n, H
 }
 
