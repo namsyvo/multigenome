@@ -10,7 +10,7 @@ package distance
 
 import (
 	"math"
-	"fmt"
+	//"fmt"
 )
 
 //-------------------------------------------------------------------------------------------------
@@ -89,34 +89,31 @@ func MinIntV(v1 int, vn ...int) (m int) {
 // Constants and global variables.
 //-------------------------------------------------------------------------------------------------
 
-// Cost for substitution with error sequencing
-var ERR_COST float32 = 1
-
-// Distance threshold for early break
-var DIST_THRES int = 1000
-
 // SNP profile
 var SNP_PROFILE map[int][][]byte
 
-// SNP profile
+// Same length SNP
 var SAME_LEN_SNP map[int]int
 
-// Approx value for Infinity
-var INF int = math.MaxInt32
+// Distance threshold for early break
+var DIST_THRES int = math.MaxInt16
+
+// Value for Infinity
+var INF int = math.MaxInt16
 
 //-------------------------------------------------------------------------------------------------
 // Cost functions for computing distance between reads and multi-genomes.
 //-------------------------------------------------------------------------------------------------
 
 // Cost for "SNP match"
+// Input slices should have same length
 func Cost(s, t []byte) int {
-	mismatch := 0
 	for i:= 0; i < len(s); i++ {
 		if s[i] != t[i] {
-			mismatch++
+			return INF
 		}
 	}
-	return mismatch
+	return 0
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -124,33 +121,31 @@ func Cost(s, t []byte) int {
 //-------------------------------------------------------------------------------------------------
 
 // Initilize constants and global variables
-func Init(pERR_COST float32, pDIST_THRES int, pSNP_PROFILE map[int][][]byte, pSAME_LEN_SNP map[int]int) {
-	ERR_COST = pERR_COST
-	DIST_THRES = pDIST_THRES
+func Init(pDIST_THRES int, pSNP_PROFILE map[int][][]byte, pSAME_LEN_SNP map[int]int) {
 	SNP_PROFILE = pSNP_PROFILE
 	SAME_LEN_SNP = pSAME_LEN_SNP
+	DIST_THRES = pDIST_THRES
 }
 
 //-------------------------------------------------------------------------------------------------
-// Calculate the distance between reads and multi-genomes.
-// The reads include standard bases, the multi-genomes include standard bases and "*" characters.
+// Calculate the distance between s and t in backward direction.
 // 	s is a read.
 // 	t is part of a multi-genome.
+// The reads include standard bases, the multi-genomes include standard bases and "*" characters.
 //-------------------------------------------------------------------------------------------------
-func DistanceMulti(s, t []byte, pos int) (float32, int, int, int, [][]int) {
+func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]byte, map[int]int) {
 
-	//fmt.Println(string(s), string(t))
-    m, n := len(s), len(t)
-    var i, j, k int
-
-    //"Hamming distance" part
     var cost int
     var d, min_d int
     var snp_len int
     var snp_values [][]byte
     var is_snp, is_same_len_snp bool
+	var S = make(map[int][]byte)
+
+    var i, j, k int
 
     d = 0
+    m, n := len(s), len(t)
     for m > 0 && n > 0 {
 		snp_values, is_snp = SNP_PROFILE[pos + n - 1]
 		snp_len, is_same_len_snp = SAME_LEN_SNP[pos + n - 1]
@@ -161,13 +156,17 @@ func DistanceMulti(s, t []byte, pos int) (float32, int, int, int, [][]int) {
     		m--
     		n--
     	} else if is_same_len_snp {
-			min_d = INF
+			min_d = 1000*INF
     		for i = 0; i < len(snp_values); i++ {
     			cost = Cost(s[m - snp_len: m], snp_values[i])
     			if min_d > cost {
     				min_d = cost
     			}
     		}
+	  		if min_d == INF {
+	  			return INF, 0, m, n, make(map[int][]byte), make(map[int]int)
+	  		}
+	  		S[pos + n - 1] = s[m - snp_len: m]
     		d += min_d
     		m -= snp_len
     		n--
@@ -175,95 +174,241 @@ func DistanceMulti(s, t []byte, pos int) (float32, int, int, int, [][]int) {
     		break
     	}
     }
-    //fmt.Println(d, m, n)
 
-    H := make([][]int, m + 1)
+    D := make([][]int, m + 1)
+    T := make(map[int]int)
     for i = 0; i <= m; i++ {
-            H[i] = make([]int, n + 1)
+		D[i] = make([]int, n + 1)
     }
-    H[0][0] = 0
+    D[0][0] = 0
     for i = 1; i <= m; i++ {
-		H[i][0] = INF
+		D[i][0] = INF
     }
     for j = 1; j <= n; j++ {
-		H[0][j] = 0
+		D[0][j] = 0
     }
-	//fmt.Println(H)
-	var temp int
+	var temp_dis, min_index int
     for i = 1; i <= m; i++ {
-		//fmt.Println("i: ", i)
         for j = 1; j <= n; j++ {
 			snp_values, is_snp = SNP_PROFILE[pos + j - 1]
 	    	if !is_snp {
 				if s[i-1] != t[j-1] {
-					H[i][j] = H[i - 1][j - 1] + 1
+					D[i][j] = D[i - 1][j - 1] + 1
 				} else {
-					H[i][j] = H[i - 1][j - 1]
+					D[i][j] = D[i - 1][j - 1]
 				}
 	   		} else {
-				H[i][j] = INF
+				D[i][j] = 1000*INF //1000*INF is a value for testing, will change to a better solution later
+				min_index = 0
 				for k = 0; k < len(snp_values); k++ {
-					if i - len(snp_values[k]) >= 0 {
-						if snp_values[k][0] == '-' {
-	    						temp = H[i][j - 1]
+					snp_len = len(snp_values[k])
+					//One possible case: i - snp_len < 0 for all k
+					if i - snp_len >= 0 {
+						if snp_values[k][0] != '.' {
+							temp_dis = D[i - snp_len][j - 1] + Cost(s[i - snp_len : i], snp_values[k])
 						} else {
-							temp = H[i - len(snp_values[k])][j - 1] + Cost(s[i - len(snp_values[k]) : i], snp_values[k])
+    						temp_dis = D[i][j - 1]
 						}
-	    				if H[i][j] > temp {
-	    					H[i][j] = temp
-	    					}
+	    				if D[i][j] > temp_dis {
+	    					D[i][j] = temp_dis
+							min_index = k
+	    				}
 					}
 	   			}
+				if (D[i][j] < INF) {
+					T[pos + j - 1] = min_index
+				}
 			}
 		}
 	}
-    return float32(d + H[m][n]) * ERR_COST, d, m, n, H
+	if D[m][n] >= INF {
+		return 0, INF, m, n, S, make(map[int]int)
+	}
+    return d, D[m][n], m, n, S, T
 }
 
 
 //-------------------------------------------------------------------------------------------------
-// Construct an alignment of s1 and s2 as pair of indexes, traceback from dynamic programming table
+// BackwardTraceBack constructs alignment between s and t based on the results from BackwardDistanceMulti.
+// 	s is a read.
+// 	t is part of a multi-genome.
+// The reads include standard bases, the multi-genomes include standard bases and "*" characters.
 //-------------------------------------------------------------------------------------------------
-func TraceBack(s1, s2 []byte, d [][]float32, pos int) []int {
+func BackwardTraceBack(s, t []byte, m, n int, S map[int][]byte, T map[int]int, pos int) map[int][]byte {
 
-	//trace back to find number of insertions / deletions / substitutions
-	var i_count, d_count, s_count int = 0, 0, 0
+	var snp_values [][]byte
+	var is_snp bool
+	var snp_len int
+	var snp_calling = make(map[int][]byte)
 
-	var i, j int = int(len(s1)), int(len(s2))
-	//fmt.Println("(", i, ", ", j, "); ")
-	for  i > 0 || j > 0 {
-
-		if i > 0 && j > 0 {
-			var diff float32 = d[i][j] - min3Float32(d[i - 1][j - 1], d[i - 1][j], d[i][j - 1]);
-		  	if diff == (d[i][j] - d[i - 1][j - 1]) {
-				if s1[i-1] == s2[j-1] { // matched, no operation
-		  			fmt.Println("(", i - 1, ", ", j - 1, "); ")
-		  			i--;
-		  			j--;
-				} else { // substitution operation
-		  			fmt.Println("(", i - 1, ", ", j - 1, "); ")
-		  			s_count++;
-		  			i--;
-		  			j--;
-				}
-		  	} else if diff == d[i][j] - d[i - 1][j] { // deletion operation
-				fmt.Println("(", i - 1, ", ", "-", "); ")
-				d_count++;
-				i--;
-		  	} else if diff == d[i][j] - d[i][j - 1] { // insertion operation
-				fmt.Println("(", "-", ", ", j - 1, "); ")
-				i_count++;
-				j--;
-		  	}
-		} else if i == 0 { // insertion operation
-		  fmt.Println("(","-", ", ", j - 1, "); ")
-		  i_count++;
-		  j--;	    
-		} else if j == 0 { // deletion operation
-		  fmt.Println("(", i - 1, ", ", "-", "); ")
-		  d_count++;
-		  i--;	
-		}    
+	for k, v := range S {
+		snp_calling[k] = v
 	}
-	return []int{i_count, d_count, s_count}
+	var i, j int = m, n
+	for  i > 0 || j > 0 {
+		snp_values, is_snp = SNP_PROFILE[pos + j - 1]
+		if i > 0 && j > 0 {
+		  	if !is_snp {
+		  		i, j = i - 1, j - 1
+		  	} else {
+				if snp_values[T[pos + j - 1]][0] != '.' {
+			  		snp_len = len(snp_values[T[pos + j - 1]])
+			  	} else {
+			  		snp_len = 0
+			  	}
+		  		snp_calling[pos + j - 1] = s[i - snp_len : i]
+		  		i, j = i - snp_len, j - 1
+		  	}
+		} else if i == 0 {
+			j = j - 1;
+		} else if j == 0 {
+			i = i - 1;
+		}
+	}
+	return snp_calling
+}
+
+
+//-------------------------------------------------------------------------------------------------
+// Calculate the distance between s and t in forward direction.
+// 	s is a read.
+// 	t is part of a multi-genome.
+// The reads include standard bases, the multi-genomes include standard bases and "*" characters.
+//-------------------------------------------------------------------------------------------------
+func ForwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]byte, map[int]int) {
+
+    M, N := len(s), len(t)
+
+    var cost int
+    var d, min_d int
+    var snp_len int
+    var snp_values [][]byte
+    var is_snp, is_same_len_snp bool
+	var S = make(map[int][]byte)
+
+    var i, j, k int
+
+    d = 0
+    m, n := M, N
+    for m > 0 && n > 0 {
+		snp_values, is_snp = SNP_PROFILE[pos + (N - 1) - (n - 1)]
+		snp_len, is_same_len_snp = SAME_LEN_SNP[pos + (N - 1) - (n - 1)]
+    	if !is_snp {
+        	if s[(M - 1) - (m - 1)] != t[(N - 1) - (n - 1)] {
+        		d++
+        	}
+    		m--
+    		n--
+    	} else if is_same_len_snp {
+			min_d = 1000*INF
+    		for i = 0; i < len(snp_values); i++ {
+    			cost = Cost(s[M - m: M - (m - snp_len)], snp_values[i])
+    			if min_d > cost {
+    				min_d = cost
+    			}
+    		}
+	  		if min_d == INF {
+	  			return INF, 0, m, n, make(map[int][]byte), make(map[int]int)
+	  		}
+	  		S[pos + (N - 1) - (n - 1)] = s[M - m: M - (m - snp_len)]
+    		d += min_d
+    		m -= snp_len
+    		n--
+    	} else {
+    		break
+    	}
+    }
+
+    D := make([][]int, m + 1)
+    T := make(map[int]int)
+    for i = 0; i <= m; i++ {
+		D[i] = make([]int, n + 1)
+    }
+    D[0][0] = 0
+    for i = 1; i <= m; i++ {
+		D[i][0] = INF
+    }
+    for j = 1; j <= n; j++ {
+		D[0][j] = 0
+    }
+	var temp_dis, min_index int
+    for i = 1; i <= m; i++ {
+        for j = 1; j <= n; j++ {
+			snp_values, is_snp = SNP_PROFILE[pos + (N - 1) - (j - 1)]
+		    if !is_snp {
+				if s[(M - 1) - (i - 1)] != t[(N - 1) - (j - 1)] {
+						D[i][j] = D[i - 1][j - 1] + 1
+				} else {
+						D[i][j] = D[i - 1][j - 1]
+				}
+		   	} else {
+				D[i][j] = 1000*INF //1000*INF is a value for testing, will change to a better solution later
+				min_index = 0
+				for k = 0; k < len(snp_values); k++ {
+					snp_len = len(snp_values[k])
+					//One possible case: i - snp_len < 0 for all k
+					if i - snp_len >= 0 {
+						if snp_values[k][0] != '.' {
+							temp_dis = D[i - snp_len][j - 1] + Cost(s[M - i : M - (i - snp_len)], snp_values[k])
+						} else {
+	    						temp_dis = D[i][j - 1]
+						}
+	    				if D[i][j] > temp_dis {
+	    					D[i][j] = temp_dis
+							min_index = k
+		   				}
+					}
+		   		}
+				if (D[i][j] < INF) {
+					T[pos + (N - 1) - (j - 1)] = min_index
+				}
+			}
+		}
+    }
+	if D[m][n] >= INF {
+		return 0, INF, m, n, S, make(map[int]int)
+	}
+    return d, D[m][n], m, n, S, T
+}
+
+
+//-------------------------------------------------------------------------------------------------
+// ForwardTraceBack constructs alignment between s and t based on the results from ForwardDistanceMulti.
+// 	s is a read.
+// 	t is part of a multi-genome.
+// The reads include standard bases, the multi-genomes include standard bases and "*" characters.
+//-------------------------------------------------------------------------------------------------
+func ForwardTraceBack(s, t []byte, m, n int, S map[int][]byte, T map[int]int, pos int) map[int][]byte {
+
+	var is_snp bool
+	var snp_values [][]byte
+	var snp_len int
+	var snp_calling = make(map[int][]byte)
+
+	for k, v := range S {
+		snp_calling[k] = v
+	}
+	var i, j int = m, n
+	var M, N int = len(s), len(t)
+	for  i > 0 || j > 0 {
+		snp_values, is_snp = SNP_PROFILE[pos + (N - 1) - (j - 1)]
+		if i > 0 && j > 0 {
+		  	if !is_snp {
+		  		i, j = i - 1, j - 1
+		  	} else {
+				if snp_values[T[pos + (N - 1) - (j - 1)]][0] != '.' {
+			  		snp_len = len(snp_values[T[pos + (N - 1) - (j - 1)]])
+			  	} else {
+			  		snp_len = 0
+			  	}
+		  		snp_calling[pos + (N - 1) - (j - 1)] = s[M - i : M - (i - snp_len)]
+		  		i, j = i - snp_len, j - 1
+		  	}
+		} else if i == 0 {
+			j = j - 1;
+		} else if j == 0 {
+			i = i - 1;
+		}
+	}
+	return snp_calling
 }
