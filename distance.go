@@ -133,7 +133,7 @@ func Init(pDIST_THRES int, pSNP_PROFILE map[int][][]byte, pSAME_LEN_SNP map[int]
 // 	t is part of a multi-genome.
 // The reads include standard bases, the multi-genomes include standard bases and "*" characters.
 //-------------------------------------------------------------------------------------------------
-func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]byte, map[int]int) {
+func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]byte, [][][]byte) {
 
     var cost int
     var d, min_d int
@@ -164,7 +164,7 @@ func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]
     			}
     		}
 	  		if min_d == INF {
-	  			return INF, 0, m, n, make(map[int][]byte), make(map[int]int)
+	  			return INF, 0, m, n, make(map[int][]byte), [][][]byte{}
 	  		}
 	  		S[pos + n - 1] = s[m - snp_len: m]
     		d += min_d
@@ -176,10 +176,14 @@ func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]
     }
 
     D := make([][]int, m + 1)
-    T := make(map[int]int)
     for i = 0; i <= m; i++ {
 		D[i] = make([]int, n + 1)
     }
+    T := make([][][]byte, m)
+    for i = 0; i < m; i++ {
+		T[i] = make([][]byte, n)
+    }
+
     D[0][0] = 0
     for i = 1; i <= m; i++ {
 		D[i][0] = INF
@@ -215,14 +219,12 @@ func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]
 	    				}
 					}
 	   			}
-				if (D[i][j] < INF) {
-					T[pos + j - 1] = min_index
-				}
+				T[i - 1][j - 1] = snp_values[min_index]
 			}
 		}
 	}
 	if D[m][n] >= INF {
-		return 0, INF, m, n, S, make(map[int]int)
+		return 0, INF, m, n, S, [][][]byte{}
 	}
     return d, D[m][n], m, n, S, T
 }
@@ -234,9 +236,8 @@ func BackwardDistanceMulti(s, t []byte, pos int) (int, int, int, int, map[int][]
 // 	t is part of a multi-genome.
 // The reads include standard bases, the multi-genomes include standard bases and "*" characters.
 //-------------------------------------------------------------------------------------------------
-func BackwardTraceBack(s, t []byte, m, n int, S map[int][]byte, T map[int]int, pos int) map[int][]byte {
+func BackwardTraceBack(s, t []byte, m, n int, S map[int][]byte, T [][][]byte, pos int) map[int][]byte {
 
-	var snp_values [][]byte
 	var is_snp bool
 	var snp_len int
 	var snp_calling = make(map[int][]byte)
@@ -246,13 +247,13 @@ func BackwardTraceBack(s, t []byte, m, n int, S map[int][]byte, T map[int]int, p
 	}
 	var i, j int = m, n
 	for  i > 0 || j > 0 {
-		snp_values, is_snp = SNP_PROFILE[pos + j - 1]
+		_, is_snp = SNP_PROFILE[pos + j - 1]
 		if i > 0 && j > 0 {
 		  	if !is_snp {
 		  		i, j = i - 1, j - 1
 		  	} else {
-				if snp_values[T[pos + j - 1]][0] != '.' {
-			  		snp_len = len(snp_values[T[pos + j - 1]])
+				if T[i - 1][j - 1][0] != '.' {
+			  		snp_len = len(T[i - 1][j - 1])
 			  	} else {
 			  		snp_len = 0
 			  	}
