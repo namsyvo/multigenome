@@ -103,12 +103,15 @@ func TestBackwardDistanceMultiAlignment(t *testing.T) {
 
 	}
 	for i := 0; i < len(test_cases); i++ {
-		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen)
+		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen, 100)
 		read, genome := []byte(test_cases[i].read), []byte(test_cases[i].genome)
 		d, D, m, n, S, T := distance.BackwardDistanceMulti(read, genome, 0)
 		if d + D != test_cases[i].d {
 			t.Errorf("Fail alignment (case, read, genome, calculated distance, true distance, d, m, n):",
 			 i, string(read), string(genome), d + D, test_cases[i].d, m, n)
+		} else if d + D >= distance.INF {
+			fmt.Println("Successful alignment but with infinity distance (distance, read, genome, d, m, n, case):",
+			 d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)), m, n, i)
 		} else {
 			fmt.Println("Successful alignment (distance, read, genome, d, m, n, case):",
 			 d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)), m, n, i)
@@ -167,56 +170,22 @@ func TestForwardDistanceMultiAlignment(t *testing.T) {
 
 	}
 	for i := 0; i < len(test_cases); i++ {
-		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen)
+		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen, 100)
 		read, genome := []byte(test_cases[i].read), []byte(test_cases[i].genome)
 		d, D, m, n, S, T := distance.ForwardDistanceMulti(read, genome, 0)
 		if d + D != test_cases[i].d {
 			t.Errorf("Fail alignment (read, genome, calculated distance, true distance, m, n, case):",
 			 string(read), string(genome), d + D, test_cases[i].d, m, n, i)
+		} else if d + D >= distance.INF {
+			fmt.Println("Successful alignment but with infinity distance (distance, read, genome, d, m, n, case):",
+			 d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)), m, n, i)
 		} else {
-			fmt.Println("Successful alignment (distance, read, genome, profile, m, n, case):",
-				d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)),
-				 test_cases[i].Profile, m, n, i)
-			snp := distance.ForwardTraceBack(read, genome, m, n, S, T, 0)
-			for k, v := range snp {
-				fmt.Println(k, string(v))
-			}
+			fmt.Println("Successful alignment (distance, read, genome, d, m, n, case):",
+			 d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)), m, n, i)
+			fmt.Println(distance.ForwardTraceBack(read, genome, m, n, S, T, 0))
 		}
 	}
 }
-
-/*
-// Test for alignment between reads and "starred" multi-genomes
-// Some more complex cases
-func TestForwardDistanceMultiAlignment2(t *testing.T) {
-	defer __(o_())
-
-	var test_cases = []TestCase{
-
-		//test for 2 snp pos
-		{ type_snpprofile{26042385: {{'G'}, {'G', 'C'}}, 26042387: {{'A'}, {'A', 'C', 'T'}} },
-		 type_samelensnp{}, "TTTAACAAATTGG*A*TC", "ATTAACTTATTGGGAA", 3 },
-
-	}
-	for i := 0; i < len(test_cases); i++ {
-		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen)
-		read, genome := []byte(test_cases[i].read), []byte(test_cases[i].genome)
-		d, D, m, n, S, T := distance.ForwardDistanceMulti(read, genome, 26042372)
-		if d + D != test_cases[i].d {
-			t.Errorf("Fail alignment (read, genome, calculated distance, true distance, m, n, case):",
-			 string(read), string(genome), d + D, test_cases[i].d, m, n, i)
-		} else {
-			fmt.Println("Successful alignment (distance, read, genome, profile, m, n, case):",
-				d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)),
-				 test_cases[i].Profile, m, n, i)
-			snp := distance.ForwardTraceBack(read, genome, m, n, S, T, 26042372)
-			for k, v := range snp {
-				fmt.Println(k, string(v))
-			}
-		}
-	}
-}
-*/
 
 // Test for alignment between reads and "starred" multi-genomes
 // Some more complex cases
@@ -224,14 +193,12 @@ func TestBackwardDistanceMultiAlignment2(t *testing.T) {
 	defer __(o_())
 
 	var test_cases = []TestCase{
-
 		//test for 2 snp pos
 		{ type_snpprofile{26042387: {{'G'}, {'G', 'C'}}, 26042385: {{'A'}, {'A', 'C', 'T'}} },
 		 type_samelensnp{}, "CT*A*GGTTAAACAATTT", "AAGGGTTATTCAATTA", 3 },
-
 	}
 	for i := 0; i < len(test_cases); i++ {
-		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen)
+		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen, 100)
 		read, genome := []byte(test_cases[i].read), []byte(test_cases[i].genome)
 		d, D, m, n, S, T := distance.BackwardDistanceMulti(read, genome, 26042383)
 		if d + D != test_cases[i].d {
@@ -242,6 +209,35 @@ func TestBackwardDistanceMultiAlignment2(t *testing.T) {
 				d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)),
 				 test_cases[i].Profile, m, n, i)
 			snp := distance.BackwardTraceBack(read, genome, m, n, S, T, 26042383)
+			for k, v := range snp {
+				fmt.Println(k, string(v))
+			}
+		}
+	}
+}
+
+// Test for alignment between reads and "starred" multi-genomes
+// Some more complex cases
+func TestForwardDistanceMultiAlignment2(t *testing.T) {
+	defer __(o_())
+
+	var test_cases = []TestCase{
+		//test for 2 snp pos
+		{ type_snpprofile{26042385: {{'G'}, {'G', 'C'}}, 26042387: {{'A'}, {'A', 'C', 'T'}} },
+		 type_samelensnp{}, "TTTAACAAATTGG*A*TC", "ATTAACTTATTGGGAA", 3 },
+	}
+	for i := 0; i < len(test_cases); i++ {
+		distance.Init(DIST_THRES, test_cases[i].Profile, test_cases[i].SNPlen, 100)
+		read, genome := []byte(test_cases[i].read), []byte(test_cases[i].genome)
+		d, D, m, n, S, T := distance.ForwardDistanceMulti(read, genome, 26042372)
+		if d + D != test_cases[i].d {
+			t.Errorf("Fail alignment (read, genome, calculated distance, true distance, m, n, case):",
+			 string(read), string(genome), d + D, test_cases[i].d, m, n, i)
+		} else {
+			fmt.Println("Successful alignment (distance, read, genome, profile, m, n, case):",
+				d + D, string([]byte(test_cases[i].read)), string([]byte(test_cases[i].genome)),
+				 test_cases[i].Profile, m, n, i)
+			snp := distance.ForwardTraceBack(read, genome, m, n, S, T, 26042372)
 			for k, v := range snp {
 				fmt.Println(k, string(v))
 			}
