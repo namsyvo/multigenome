@@ -1,88 +1,14 @@
 //-------------------------------------------------------------------------------------------------
 // Copyright 2013 Nam S. Vo
-
 // Distance package provides some functions for distance between reads and "starred" multi-genomes.
-
 // DistanceMulti calculates the distance between reads and "starred" multi-genomes.
 //-------------------------------------------------------------------------------------------------
 
-package distance
+package distance2
 
 import (
 	"math"
 )
-
-//-------------------------------------------------------------------------------------------------
-//Utility functions: max, min
-//-------------------------------------------------------------------------------------------------
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	} // if
-	return b
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	} // if
-	return b
-}
-
-func min3Int(a, b, c int) int {
-	if a < b {
-		if a < c {
-			return a
-		}
-	} else {
-		if b < c {
-			return b
-		}
-	}
-	return c
-}
-
-func min3Float32(a, b, c float32) float32 {
-	if a < b {
-		if a < c {
-			return a
-		}
-	} else {
-		if b < c {
-			return b
-		}
-	}
-	return c
-}
-
-// Minimum of a slice of int arguments
-func MinIntS(v []int) (m int) {
-        if len(v) > 0 {
-                m = v[0]
-        }
-        for i := 1; i < len(v); i++ {
-                if v[i] < m {
-                        m = v[i]
-                }
-        }
-        return
-}
-
-// Minimum of a variable number of int arguments
-func MinIntV(v1 int, vn ...int) (m int) {
-        m = v1
-        for i := 0; i < len(vn); i++ {
-                if vn[i] < m {
-                        m = vn[i]
-                }
-        }
-        return
-}
-
-//-------------------------------------------------------------------------------------------------
-// Functions for distance between reads and multi-genomes.
-//-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
 // Constants and global variables.
@@ -101,11 +27,9 @@ var DIST_THRES int = math.MaxInt16
 var INF int = math.MaxInt16
 
 //-------------------------------------------------------------------------------------------------
-// Cost functions for computing distance between reads and multi-genomes.
-//-------------------------------------------------------------------------------------------------
-
 // Cost for "SNP match"
 // Input slices should have same length
+//-------------------------------------------------------------------------------------------------
 func Cost(s, t []byte) int {
 	for i:= 0; i < len(s); i++ {
 		if s[i] != t[i] {
@@ -114,10 +38,6 @@ func Cost(s, t []byte) int {
 	}
 	return 0
 }
-
-//-------------------------------------------------------------------------------------------------
-// Functions for computing distance between reads and multi-genomes.
-//-------------------------------------------------------------------------------------------------
 
 // Initilize constants and global variables
 func Init(pDIST_THRES int, pSNP_PROFILE map[int][][]byte, pSAME_LEN_SNP map[int]int, read_len int) {
