@@ -1,7 +1,8 @@
 multigenome
 ===========
 
-A package for creating and working with reference multi-genome
+A package for creating and working with reference multi-genome.
+
 1. Creating multigenomes from single genomes and dbSNPs:
 
 2. Indexing the reference multigenomes:
