@@ -4,7 +4,7 @@
 // DistanceMulti calculates the distance between reads and "starred" multi-genomes.
 //-------------------------------------------------------------------------------------------------
 
-package distance2
+package multigenome2
 
 import (
 	"math"

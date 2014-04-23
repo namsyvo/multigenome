@@ -1,33 +1,14 @@
 //----------------------------------------------------------------------------------------
-// Copyright 2013 Nam S. Vo
-
-// Test for distance2 package
+// Test for distance module
+// Copyright 2013 Nam Sy Vo
 //----------------------------------------------------------------------------------------
 
-package distance2
+package multigenome2
 
 import (
 	"fmt"
-	"runtime"
-	"strings"
 	"testing"
 )
-
-//Functions for displaying information
-func o_() string {
-	pc, _, _, _ := runtime.Caller(1)
-	name := runtime.FuncForPC(pc).Name()
-	if p := strings.LastIndexAny(name, `./\`); p >= 0 {
-		name = name[p+1:]
-	} // if
-	fmt.Println("== BEGIN", name, "===")
-	return name
-}
-
-func __(name string) {
-	fmt.Println("== END", name, "===")
-	fmt.Println()
-}
 
 type type_snpprofile map[int][][]byte
 type type_samelensnp map[int]int
