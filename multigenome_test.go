@@ -1,9 +1,9 @@
 //----------------------------------------------------------------------------------------
-// Copyright 2013 Nam S. Vo
-// Test for multigenome2 package
+// Test for building multigenome
+// Copyright 2014 Nam Sy Vo
 //----------------------------------------------------------------------------------------
 
-package multigenome2
+package multigenome
 
 import (
 	"fmt"
@@ -31,16 +31,17 @@ func __(name string) {
 func TestMultiGenomeBuild(t *testing.T) {
     defer __(o_())
 
-	sequence := fastaRead("data-test/chr1.fasta")
-	SNP_array := vcfRead("data-test/vcf_chr_1.vcf")
-
+	sequence := fastaRead("test_data/chr1.fasta")
+	SNP_array := vcfRead("test_data/vcf_chr_1.vcf")
 	genome := buildMultigenome2(SNP_array, sequence)
-	SaveSNPLocation("data-test/SNPLocation.txt", SNP_array)
-	SaveMulti("data-test/genomestar.txt", genome)
-	genome_test := LoadMulti("data-test/genomestar.txt")
-	byte_array, flag := LoadSNPLocation("data-test/SNPLocation.txt")
 
-	fmt.Printf("%s \n", genome_test)
-	fmt.Println(byte_array)
-	fmt.Println(flag)
+	SaveMulti("test_data/genomestar.txt", genome)
+	SaveSNPLocation("test_data/SNPLocation.txt", SNP_array)
+
+	saved_genome := LoadMulti("test_data/genomestar.txt")
+	saved_SNP_array, saved_SameLen_SNP := LoadSNPLocation("test_data/SNPLocation.txt")
+
+	fmt.Println(len(saved_genome))
+	fmt.Println(len(saved_SNP_array))
+	fmt.Println(len(saved_SameLen_SNP))
 }

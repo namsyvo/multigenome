@@ -1,10 +1,11 @@
-///////////////////////////////////////////////////////////////////
-// Combine SNPs and INDELs with a reference genome (fasta file)
-// Fall 2013 - Quang
-// Modified by Nam Sy Vo
-///////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+// Multigenome package: multigenome module.
+// Combine SNPs and INDELs from dbSNPs (vcf file) with a reference genome (fasta file).
+// Copyright 2014 Quang Minh Tran.
+// Modified by Nam Sy Vo.
+//-------------------------------------------------------------------------------------------------
 
-package multigenome2
+package multigenome
 
 import (
 	"bufio"

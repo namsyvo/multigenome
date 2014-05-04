@@ -1,9 +1,9 @@
 //----------------------------------------------------------------------------------------
-// Test for distance module
-// Copyright 2013 Nam Sy Vo
+// Test for calculating distance
+// Copyright 2014 Nam Sy Vo
 //----------------------------------------------------------------------------------------
 
-package multigenome2
+package multigenome
 
 import (
 	"fmt"

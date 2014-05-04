@@ -1,10 +1,10 @@
 //-------------------------------------------------------------------------------------------------
+// Multigenome package: distance module.
+// Calculating distance and determining alignment between reads and "starred" multigenomes.
 // Copyright 2014 Nam Sy Vo
-// Distance package provides some functions for distance between reads and "starred" multi-genomes.
-// DistanceMulti calculates the distance between reads and "starred" multi-genomes.
 //-------------------------------------------------------------------------------------------------
 
-package multigenome2
+package multigenome
 
 import (
 	"math"
